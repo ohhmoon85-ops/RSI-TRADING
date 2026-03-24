@@ -143,16 +143,22 @@ async function processSignal(signal: Signal): Promise<void> {
   await Promise.allSettled(tasks);
 }
 
-/** 전체 유니버스 배치 스캔 */
-export async function runScan(): Promise<{ processed: number; signals: number; errors: string[] }> {
-  const BATCH_SIZE = 15; // Vercel 60초 제한 내 처리 가능한 크기
+/** 유니버스 스캔
+ * @param fullScan true → 전체 57개 동시 스캔 (수동 스캔용, 60초 제한)
+ *                 false → 15개 배치 순환 (Cron용, 10초 제한)
+ */
+export async function runScan(fullScan = false): Promise<{ processed: number; signals: number; errors: string[] }> {
+  const BATCH_SIZE = 15;
 
-  // 배치 인덱스로 순환
-  const batchIdx = (await kv.get<number>(KV_KEYS.batchIndex())) ?? 0;
-  const totalBatches = Math.ceil(KOREA_UNIVERSE.length / BATCH_SIZE);
-  const start = batchIdx * BATCH_SIZE;
-  const batch = KOREA_UNIVERSE.slice(start, start + BATCH_SIZE);
-  await kv.set(KV_KEYS.batchIndex(), (batchIdx + 1) % totalBatches);
+  let batch = KOREA_UNIVERSE;
+  if (!fullScan) {
+    // 배치 인덱스로 순환
+    const batchIdx = (await kv.get<number>(KV_KEYS.batchIndex())) ?? 0;
+    const totalBatches = Math.ceil(KOREA_UNIVERSE.length / BATCH_SIZE);
+    const start = batchIdx * BATCH_SIZE;
+    batch = KOREA_UNIVERSE.slice(start, start + BATCH_SIZE);
+    await kv.set(KV_KEYS.batchIndex(), (batchIdx + 1) % totalBatches);
+  }
 
   const errors: string[] = [];
   let signalCount = 0;

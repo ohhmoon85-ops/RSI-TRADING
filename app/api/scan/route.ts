@@ -12,7 +12,7 @@ export const maxDuration = 60;
 export async function GET() {
   const start = Date.now();
   try {
-    const result = await runScan();
+    const result = await runScan(true); // 전체 57개 동시 스캔
     const duration = Date.now() - start;
     console.log(`[Manual Scan] 완료: ${result.processed}종목, ${result.signals}신호, ${duration}ms`);
     if (result.errors.length > 0) {
