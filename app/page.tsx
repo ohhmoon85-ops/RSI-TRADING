@@ -33,10 +33,17 @@ export default function DashboardPage() {
   const handleManualScan = async () => {
     setScanning(true);
     try {
-      const res = await fetch('/api/cron/scan');
+      const res = await fetch('/api/scan');
       const data = await res.json();
-      setLastScan(`${data.signals ?? 0}개 신호 감지 (${data.durationMs ?? 0}ms)`);
+      if (!res.ok || !data.ok) {
+        setLastScan(`❌ 오류: ${data.error ?? '알 수 없는 오류'}`);
+      } else {
+        const errSummary = data.errors?.length > 0 ? ` (실패 ${data.errors.length}건)` : '';
+        setLastScan(`✓ ${data.processed}종목 스캔 · ${data.signals}개 신호${errSummary} · ${data.durationMs}ms`);
+      }
       await loadSignals();
+    } catch (e) {
+      setLastScan(`❌ 네트워크 오류: ${e}`);
     } finally {
       setScanning(false);
     }
