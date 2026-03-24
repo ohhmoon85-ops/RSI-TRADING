@@ -2,7 +2,7 @@
 // 전역 타입 정의
 // ============================================================
 
-export type Market = 'US' | 'KR';
+export type Market = 'KR';
 export type Timeframe = '5m' | '15m' | '1h' | '1d';
 export type SignalType = 'BUY_A' | 'BUY_B' | 'SELL';
 export type SignalStatus = 'ACTIVE' | 'TP_HIT' | 'SL_HIT' | 'EXPIRED' | 'PENDING';

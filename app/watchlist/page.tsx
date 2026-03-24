@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { WatchlistItem, Market, Timeframe } from '@/types';
+import type { WatchlistItem, Timeframe } from '@/types';
 
 const TF_OPTIONS: Timeframe[] = ['5m', '15m', '1h', '1d'];
 
@@ -12,7 +12,6 @@ export default function WatchlistPage() {
   const [form, setForm] = useState({
     ticker: '',
     name: '',
-    market: 'US' as Market,
     timeframes: ['15m'] as Timeframe[],
     notifyTelegram: true,
     notifyPush: true,
@@ -36,11 +35,11 @@ export default function WatchlistPage() {
     const res = await fetch('/api/watchlist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, market: 'KR' }),
     });
 
     if (res.ok) {
-      setForm({ ticker: '', name: '', market: 'US', timeframes: ['15m'], notifyTelegram: true, notifyPush: true, notifyEmail: false });
+      setForm({ ticker: '', name: '', timeframes: ['15m'], notifyTelegram: true, notifyPush: true, notifyEmail: false });
       await load();
     } else {
       const err = await res.json();
@@ -85,31 +84,24 @@ export default function WatchlistPage() {
 
       {/* 종목 추가 폼 */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6">
-        <h2 className="text-sm font-semibold text-white mb-4">종목 추가</h2>
+        <h2 className="text-sm font-semibold text-white mb-4">🇰🇷 한국주식 종목 추가</h2>
         <form onSubmit={handleAdd} className="space-y-4">
-          {/* 티커 + 종목명 + 시장 + 추가 버튼 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <input
               type="text"
-              placeholder="티커 (예: AAPL, 005930)"
+              placeholder="종목코드 (예: 005930, 000660)"
               value={form.ticker}
-              onChange={(e) => setForm((f) => ({ ...f, ticker: e.target.value.toUpperCase() }))}
-              className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+              onChange={(e) => setForm((f) => ({ ...f, ticker: e.target.value.replace(/\D/g, '') }))}
+              maxLength={6}
+              className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-mono"
             />
             <input
               type="text"
-              placeholder="종목명 (선택)"
+              placeholder="종목명 (예: 삼성전자)"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
             />
-            <select
-              value={form.market}
-              onChange={(e) => setForm((f) => ({ ...f, market: e.target.value as Market }))}
-              className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
-              <option value="US">🇺🇸 미국주식</option>
-              <option value="KR">🇰🇷 한국주식</option>
-            </select>
             <button
               type="submit"
               disabled={adding || !form.ticker}
@@ -118,7 +110,7 @@ export default function WatchlistPage() {
             </button>
           </div>
 
-          {/* 타임프레임 선택 */}
+          {/* 타임프레임 */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-slate-500 shrink-0">타임프레임:</span>
             {TF_OPTIONS.map((tf) => (
@@ -167,18 +159,18 @@ export default function WatchlistPage() {
           <div className="text-center py-16 text-slate-600 border border-slate-800 rounded-xl bg-slate-900/50">
             <div className="text-3xl mb-3">📋</div>
             <div className="text-sm font-mono">등록된 종목 없음</div>
+            <div className="text-xs text-slate-700 mt-1">위에서 6자리 종목코드를 입력하여 추가하세요</div>
           </div>
         ) : (
           items.map((item) => (
             <div key={item.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              {/* 상단: 종목 정보 */}
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-base shrink-0">
-                    {item.market === 'KR' ? '🇰🇷' : '🇺🇸'}
+                    🇰🇷
                   </div>
                   <div className="min-w-0">
-                    <div className="text-white font-bold">{item.ticker}</div>
+                    <div className="text-white font-bold font-mono">{item.ticker}</div>
                     <div className="text-xs text-slate-500 truncate">{item.name}</div>
                   </div>
                 </div>
@@ -189,7 +181,6 @@ export default function WatchlistPage() {
                 </button>
               </div>
 
-              {/* 하단: 타임프레임 + 알림 토글 */}
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex gap-1.5 flex-wrap">
                   {item.timeframes.map((tf) => (

@@ -56,20 +56,20 @@ export default function SignalCard({ signal, onResultUpdate }: Props) {
         <div className="bg-slate-900/60 rounded-lg p-3">
           <div className="text-xs text-slate-500 mb-1">진입가</div>
           <div className="text-white font-mono font-semibold text-sm">
-            {formatPrice(signal.entryPrice, signal.market)}
+            {formatPrice(signal.entryPrice)}
           </div>
         </div>
         <div className="bg-slate-900/60 rounded-lg p-3">
           <div className="text-xs text-slate-500 mb-1">손절가</div>
           <div className="text-red-400 font-mono font-semibold text-sm">
-            {formatPrice(signal.stopLoss, signal.market)}
+            {formatPrice(signal.stopLoss)}
           </div>
           <div className="text-xs text-slate-600 mt-0.5">-{riskPct}%</div>
         </div>
         <div className="bg-slate-900/60 rounded-lg p-3">
           <div className="text-xs text-slate-500 mb-1">익절가</div>
           <div className="text-sky-400 font-mono font-semibold text-sm">
-            {formatPrice(signal.takeProfit, signal.market)}
+            {formatPrice(signal.takeProfit)}
           </div>
           <div className="text-xs text-slate-600 mt-0.5">1:{signal.riskRewardRatio}</div>
         </div>
@@ -94,7 +94,7 @@ export default function SignalCard({ signal, onResultUpdate }: Props) {
           </span>
         )}
         <span className="text-xs font-mono px-2.5 py-1 rounded-full border bg-slate-800 border-slate-700 text-slate-400">
-          {signal.market === 'KR' ? '🇰🇷 한국' : '🇺🇸 미국'}
+          🇰🇷 한국주식
         </span>
       </div>
 

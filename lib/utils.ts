@@ -5,11 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(price: number, market: string): string {
-  if (market === 'KR') {
-    return `₩${price.toLocaleString('ko-KR')}`;
-  }
-  return `$${price.toFixed(2)}`;
+export function formatPrice(price: number): string {
+  return `₩${price.toLocaleString('ko-KR')}`;
 }
 
 export function formatTimeAgo(timestamp: number): string {

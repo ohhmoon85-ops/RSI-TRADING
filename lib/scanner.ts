@@ -31,7 +31,7 @@ async function scanOne(
   item: WatchlistItem,
   timeframe: string
 ): Promise<Signal[]> {
-  const candles = await fetchCandles(item.ticker, item.market, timeframe);
+  const candles = await fetchCandles(item.ticker, timeframe);
   if (candles.length < 50) return [];
 
   const indicators = calcIndicators(candles, {

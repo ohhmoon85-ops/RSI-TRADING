@@ -4,17 +4,16 @@
 
 import type { Signal } from '@/types';
 
-function formatPrice(price: number, market: string): string {
-  if (market === 'KR') return `₩${price.toLocaleString('ko-KR')}`;
-  return `$${price.toFixed(2)}`;
+function formatPrice(price: number): string {
+  return `₩${price.toLocaleString('ko-KR')}`;
 }
 
 function formatSignalMessage(signal: Signal): string {
   const emoji = signal.type === 'SELL' ? '🔴' : '🟢';
   const typeLabel = signal.type === 'SELL' ? '매도 신호' : '매수 신호';
-  const entry = formatPrice(signal.entryPrice, signal.market);
-  const sl = formatPrice(signal.stopLoss, signal.market);
-  const tp = formatPrice(signal.takeProfit, signal.market);
+  const entry = formatPrice(signal.entryPrice);
+  const sl = formatPrice(signal.stopLoss);
+  const tp = formatPrice(signal.takeProfit);
   const time = new Date(signal.createdAt).toLocaleString('ko-KR', {
     timeZone: 'Asia/Seoul',
     year: 'numeric', month: '2-digit', day: '2-digit',
