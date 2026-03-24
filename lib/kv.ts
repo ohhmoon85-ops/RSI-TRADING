@@ -79,6 +79,8 @@ export const KV_KEYS = {
   watchlist: () => 'watchlist:items',
   settings: () => 'app:settings',
   signalList: () => 'signal:list',
+  /** 유니버스 스캔 결과 (타임프레임별) */
+  scanResults: (timeframe: string) => `scan:results:${timeframe}`,
 };
 
 // 타임프레임별 TTL (초)

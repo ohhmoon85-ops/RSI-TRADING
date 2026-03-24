@@ -61,6 +61,20 @@ export interface WatchlistItem {
   createdAt: number;
 }
 
+/** 유니버스 스캔 결과 (종목별 최신 지표 스냅샷) */
+export interface ScanResult {
+  ticker: string;
+  name: string;
+  sector: string;
+  timeframe: Timeframe;
+  rsi: number;
+  bbPosition: 'ABOVE_UPPER' | 'BELOW_LOWER' | 'INSIDE';
+  macdCross: 'GOLDEN' | 'DEAD' | 'NONE';
+  signal: SignalType | null;   // 이번 스캔에서 발생한 신호 유형
+  price: number;               // 최근 종가
+  scannedAt: number;           // 스캔 시각 (ms)
+}
+
 /** 사용자 설정 */
 export interface Settings {
   rsiBuyThreshold: number;      // 기본 30

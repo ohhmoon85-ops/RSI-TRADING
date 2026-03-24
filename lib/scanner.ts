@@ -1,9 +1,9 @@
 /**
  * 핵심 스캔 엔진
- * Cron Job에서 호출. 종목별 병렬 처리 + 신호 저장
+ * Cron Job에서 호출. 유니버스 전체 종목 병렬 스캔 + 신호/결과 저장
  */
 
-import type { Signal, WatchlistItem } from '@/types';
+import type { Signal, ScanResult, Timeframe, WatchlistItem } from '@/types';
 import { fetchCandles } from '@/lib/fetchers';
 import { calcIndicators } from '@/lib/indicators';
 import { detectStrategyA } from '@/lib/signals/strategyA';
@@ -11,9 +11,9 @@ import { detectStrategyB } from '@/lib/signals/strategyB';
 import { detectSellStrategy } from '@/lib/signals/sellStrategy';
 import { shouldSendAlert } from '@/lib/notify/deduplicate';
 import { sendTelegram } from '@/lib/notify/telegram';
-import { sendEmail } from '@/lib/notify/email';
 import { sendWebPush } from '@/lib/notify/webpush';
 import { kv, KV_KEYS } from '@/lib/kv';
+import { KOREA_UNIVERSE, DEFAULT_SCAN_TIMEFRAMES } from '@/lib/universe';
 
 const DEFAULT_SETTINGS = {
   rsiBuyThreshold: 30,
@@ -26,13 +26,17 @@ const DEFAULT_SETTINGS = {
   defaultRR: 2.0,
 };
 
-/** 단일 종목 + 타임프레임 스캔 */
+/** 단일 종목 + 타임프레임 스캔 → ScanResult + Signal[] */
 async function scanOne(
-  item: WatchlistItem,
+  ticker: string,
+  name: string,
+  sector: string,
   timeframe: string
-): Promise<Signal[]> {
-  const candles = await fetchCandles(item.ticker, timeframe);
-  if (candles.length < 50) return [];
+): Promise<{ result: ScanResult; signals: Signal[] }> {
+  const candles = await fetchCandles(ticker, timeframe);
+  if (candles.length < 50) {
+    throw new Error(`캔들 데이터 부족 (${candles.length}개)`);
+  }
 
   const indicators = calcIndicators(candles, {
     rsiPeriod: 14,
@@ -43,8 +47,45 @@ async function scanOne(
     macdSignal: DEFAULT_SETTINGS.macdSignal,
   });
 
+  const lastCandle = candles[candles.length - 1];
+  const lastRsi = indicators.rsi[indicators.rsi.length - 1];
+  const lastBb = indicators.bb[indicators.bb.length - 1];
+  const lastMacd = indicators.macd[indicators.macd.length - 1];
+
+  // BB 포지션
+  const bbPosition: ScanResult['bbPosition'] =
+    lastCandle.close > lastBb.upper
+      ? 'ABOVE_UPPER'
+      : lastCandle.close < lastBb.lower
+      ? 'BELOW_LOWER'
+      : 'INSIDE';
+
+  // MACD 크로스 (전 캔들과 비교)
+  const prevMacd = indicators.macd[indicators.macd.length - 2];
+  let macdCross: ScanResult['macdCross'] = 'NONE';
+  if (prevMacd && lastMacd) {
+    if (prevMacd.MACD < prevMacd.signal && lastMacd.MACD >= lastMacd.signal) {
+      macdCross = 'GOLDEN';
+    } else if (prevMacd.MACD > prevMacd.signal && lastMacd.MACD <= lastMacd.signal) {
+      macdCross = 'DEAD';
+    }
+  }
+
+  // 가상의 WatchlistItem (유니버스 스캔용)
+  const fakeItem: WatchlistItem = {
+    id: `universe:${ticker}`,
+    ticker,
+    name,
+    market: 'KR',
+    timeframes: [timeframe as Timeframe],
+    notifyTelegram: true,
+    notifyPush: true,
+    notifyEmail: false,
+    createdAt: 0,
+  };
+
   const commonInput = {
-    item,
+    item: fakeItem,
     candles,
     rsi: indicators.rsi,
     bb: indicators.bb,
@@ -58,12 +99,26 @@ async function scanOne(
     detectSellStrategy({ ...commonInput, rsiSellThreshold: DEFAULT_SETTINGS.rsiSellThreshold, rrRatio: 1.0 }),
   ];
 
-  return candidates.filter((s): s is Signal => s !== null);
+  const detectedSignals = candidates.filter((s): s is Signal => s !== null);
+
+  const scanResult: ScanResult = {
+    ticker,
+    name,
+    sector,
+    timeframe: timeframe as Timeframe,
+    rsi: lastRsi,
+    bbPosition,
+    macdCross,
+    signal: detectedSignals.length > 0 ? detectedSignals[0].type : null,
+    price: lastCandle.close,
+    scannedAt: Date.now(),
+  };
+
+  return { result: scanResult, signals: detectedSignals };
 }
 
-/** 신호 저장 + 알림 발송 파이프라인 */
-async function processSignal(signal: Signal, item: WatchlistItem): Promise<void> {
-  // 중복 방지 확인
+/** 신호 저장 + 알림 발송 */
+async function processSignal(signal: Signal): Promise<void> {
   const canSend = await shouldSendAlert(
     signal.ticker,
     signal.timeframe,
@@ -72,65 +127,62 @@ async function processSignal(signal: Signal, item: WatchlistItem): Promise<void>
   );
   if (!canSend) return;
 
-  // KV에 신호 저장
-  await kv.set(KV_KEYS.signal(signal.id), signal, { ex: 30 * 86400 }); // 30일 TTL
+  await kv.set(KV_KEYS.signal(signal.id), signal, { ex: 30 * 86400 });
 
-  // 신호 목록 업데이트 (최신 100개 유지)
   const list = (await kv.get<string[]>(KV_KEYS.signalList())) ?? [];
   list.unshift(signal.id);
-  if (list.length > 100) list.splice(100);
+  if (list.length > 200) list.splice(200);
   await kv.set(KV_KEYS.signalList(), list);
 
-  // 알림 발송 (설정에 따라)
-  const tasks: Promise<void>[] = [];
-
-  if (item.notifyTelegram) {
-    tasks.push(sendTelegram(signal).catch((e) => console.error('[Telegram]', e)));
-  }
-  if (item.notifyPush) {
-    tasks.push(sendWebPush(signal).catch((e) => console.error('[WebPush]', e)));
-  }
-  if (item.notifyEmail) {
-    tasks.push(sendEmail(signal).catch((e) => console.error('[Email]', e)));
-  }
+  // 알림 (전역 설정 기반)
+  const tasks: Promise<void>[] = [
+    sendTelegram(signal).catch((e) => console.error('[Telegram]', e)),
+    sendWebPush(signal).catch((e) => console.error('[WebPush]', e)),
+  ];
 
   await Promise.allSettled(tasks);
 }
 
-/** 전체 위시리스트 병렬 스캔 */
+/** 전체 유니버스 배치 스캔 */
 export async function runScan(): Promise<{ processed: number; signals: number; errors: string[] }> {
-  const watchlist = (await kv.get<WatchlistItem[]>(KV_KEYS.watchlist())) ?? [];
+  const BATCH_SIZE = 15; // Vercel 60초 제한 내 처리 가능한 크기
 
-  if (watchlist.length === 0) {
-    return { processed: 0, signals: 0, errors: [] };
-  }
-
-  // 배치 분할 로직 (20종목 초과 시)
-  const BATCH_SIZE = 20;
-  let batch = watchlist;
-
-  if (watchlist.length > BATCH_SIZE) {
-    const batchIdx = (await kv.get<number>(KV_KEYS.batchIndex())) ?? 0;
-    const totalBatches = Math.ceil(watchlist.length / BATCH_SIZE);
-    const start = batchIdx * BATCH_SIZE;
-    batch = watchlist.slice(start, start + BATCH_SIZE);
-    await kv.set(KV_KEYS.batchIndex(), (batchIdx + 1) % totalBatches);
-  }
+  // 배치 인덱스로 순환
+  const batchIdx = (await kv.get<number>(KV_KEYS.batchIndex())) ?? 0;
+  const totalBatches = Math.ceil(KOREA_UNIVERSE.length / BATCH_SIZE);
+  const start = batchIdx * BATCH_SIZE;
+  const batch = KOREA_UNIVERSE.slice(start, start + BATCH_SIZE);
+  await kv.set(KV_KEYS.batchIndex(), (batchIdx + 1) % totalBatches);
 
   const errors: string[] = [];
   let signalCount = 0;
 
-  // Promise.all 병렬 처리
-  const scanTasks = batch.flatMap((item) =>
-    item.timeframes.map(async (tf) => {
+  // 타임프레임별 스캔 결과 누적 (기존 결과에 merge)
+  const resultsByTf: Record<string, ScanResult[]> = {};
+  for (const tf of DEFAULT_SCAN_TIMEFRAMES) {
+    resultsByTf[tf] = (await kv.get<ScanResult[]>(KV_KEYS.scanResults(tf))) ?? [];
+  }
+
+  const scanTasks = batch.flatMap(({ ticker, name, sector }) =>
+    DEFAULT_SCAN_TIMEFRAMES.map(async (tf) => {
       try {
-        const signals = await scanOne(item, tf);
+        const { result, signals } = await scanOne(ticker, name, sector, tf);
+
+        // 스캔 결과 업데이트 (같은 ticker+tf가 있으면 교체)
+        const existing = resultsByTf[tf];
+        const idx = existing.findIndex((r) => r.ticker === ticker);
+        if (idx >= 0) {
+          existing[idx] = result;
+        } else {
+          existing.push(result);
+        }
+
         for (const signal of signals) {
-          await processSignal(signal, item);
+          await processSignal(signal);
           signalCount++;
         }
       } catch (e) {
-        const msg = `[${item.ticker}/${tf}] ${e instanceof Error ? e.message : e}`;
+        const msg = `[${ticker}/${tf}] ${e instanceof Error ? e.message : e}`;
         errors.push(msg);
         console.error(msg);
       }
@@ -138,6 +190,11 @@ export async function runScan(): Promise<{ processed: number; signals: number; e
   );
 
   await Promise.allSettled(scanTasks);
+
+  // 결과 KV 저장 (TTL: 2시간 — 다음 완전 순환 내 갱신 보장)
+  for (const tf of DEFAULT_SCAN_TIMEFRAMES) {
+    await kv.set(KV_KEYS.scanResults(tf), resultsByTf[tf], { ex: 7200 });
+  }
 
   return { processed: batch.length, signals: signalCount, errors };
 }
