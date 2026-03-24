@@ -169,6 +169,13 @@ export async function runScan(fullScan = false): Promise<{ processed: number; si
     resultsByTf[tf] = (await kv.get<ScanResult[]>(KV_KEYS.scanResults(tf))) ?? [];
   }
 
+  // 병렬 스캔 전 토큰 미리 발급 (분당 1회 제한 대응)
+  try {
+    await fetchCandles('005930', '15m');
+  } catch {
+    // 워밍업 실패해도 계속 진행 (이미 캐시됐을 수 있음)
+  }
+
   const scanTasks = batch.flatMap(({ ticker, name, sector }) =>
     DEFAULT_SCAN_TIMEFRAMES.map(async (tf) => {
       try {

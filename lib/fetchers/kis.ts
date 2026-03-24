@@ -4,13 +4,9 @@
  */
 
 import type { Candle } from '@/types';
+import { kv } from '@/lib/kv';
 
-interface KISToken {
-  access_token: string;
-  expires_at: number;
-}
-
-let cachedToken: KISToken | null = null;
+const KV_TOKEN_KEY = 'kis:access_token';
 
 /** 모의투자 여부 — Vercel 환경변수 KIS_PAPER=true 로 설정 */
 function isPaper(): boolean {
@@ -24,17 +20,16 @@ function kisBase(): string {
     : 'https://openapi.koreainvestment.com:9443';
 }
 
-/** OAuth 토큰 발급 (1일 유효) */
+/** OAuth 토큰 발급 — KV에 캐싱 (분당 1회 제한 대응) */
 async function getKISToken(): Promise<string> {
   const appKey = process.env.KIS_APP_KEY;
   const appSecret = process.env.KIS_APP_SECRET;
 
   if (!appKey || !appSecret) throw new Error('KIS_APP_KEY/SECRET 미설정');
 
-  // 캐시된 토큰이 유효하면 재사용
-  if (cachedToken && Date.now() < cachedToken.expires_at - 60_000) {
-    return cachedToken.access_token;
-  }
+  // KV에서 캐시된 토큰 확인 (서버리스 인스턴스 간 공유)
+  const cached = await kv.get<string>(KV_TOKEN_KEY);
+  if (cached) return cached;
 
   const res = await fetch(`${kisBase()}/oauth2/tokenP`, {
     method: 'POST',
@@ -53,12 +48,13 @@ async function getKISToken(): Promise<string> {
   }
 
   const json = await res.json();
-  cachedToken = {
-    access_token: json.access_token,
-    expires_at: Date.now() + json.expires_in * 1000,
-  };
+  const token: string = json.access_token;
+  const ttlSec: number = (json.expires_in ?? 86400) - 300; // 만료 5분 전에 갱신
 
-  return cachedToken.access_token;
+  // KV에 저장 — 모든 서버리스 인스턴스가 공유
+  await kv.set(KV_TOKEN_KEY, token, { ex: ttlSec });
+
+  return token;
 }
 
 const KIS_TF_MAP: Record<string, string> = {
