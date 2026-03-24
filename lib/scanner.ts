@@ -34,8 +34,9 @@ async function scanOne(
   timeframe: string
 ): Promise<{ result: ScanResult; signals: Signal[] }> {
   const candles = await fetchCandles(ticker, timeframe);
-  if (candles.length < 50) {
-    throw new Error(`캔들 데이터 부족 (${candles.length}개)`);
+  // 최소 26개 필요 (MACD slow 26 기준)
+  if (candles.length < 26) {
+    throw new Error(`캔들 데이터 부족 (${candles.length}개, 최소 26 필요)`);
   }
 
   const indicators = calcIndicators(candles, {

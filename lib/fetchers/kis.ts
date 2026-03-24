@@ -83,11 +83,15 @@ export async function fetchKISCandles(
 
   const trId = isMinute ? 'FHKST03010200' : 'FHKST03010100';
 
+  // 현재 한국시간 HHMMSS — 이 시각 기준으로 최근 캔들을 최대한 많이 수신
+  const nowKST = new Date(Date.now() + 9 * 3600 * 1000);
+  const hhmm = nowKST.toISOString().slice(11, 19).replace(/:/g, '');
+
   const params = new URLSearchParams({
     FID_ETC_CLS_CODE: '',
     FID_COND_MRKT_DIV_CODE: 'J',
     FID_INPUT_ISCD: ticker,
-    FID_INPUT_HOUR_1: '000000',
+    FID_INPUT_HOUR_1: isMinute ? hhmm : '',
     FID_PW_DATA_INCU_YN: 'Y',
     ...(isMinute && { FID_HOUR_CLS_CODE: KIS_TF_MAP[timeframe] ?? '15' }),
   });
