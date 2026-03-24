@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #080c14;
+  --surface: #0d1421;
+  --border: #1e2d42;
+  --accent: #00d4aa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: #080c14;
+  color: #e2e8f0;
+}
+
+/* 커스텀 스크롤바 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0d1421;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e2d42;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2d4a6a;
+}
+
+/* 그리드 배경 */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
