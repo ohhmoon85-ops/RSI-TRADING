@@ -76,24 +76,25 @@ export default function WatchlistPage() {
   };
 
   return (
-    <div className="grid-bg min-h-screen p-6 space-y-6">
+    <div className="grid-bg min-h-screen p-4 md:p-6 space-y-4 md:space-y-6">
       {/* 헤더 */}
       <div>
         <div className="text-xs font-mono text-emerald-400 uppercase tracking-widest mb-1">모니터링 관리</div>
-        <h1 className="text-2xl font-bold text-white">종목 위시리스트</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">종목 위시리스트</h1>
       </div>
 
       {/* 종목 추가 폼 */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6">
         <h2 className="text-sm font-semibold text-white mb-4">종목 추가</h2>
         <form onSubmit={handleAdd} className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* 티커 + 종목명 + 시장 + 추가 버튼 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <input
               type="text"
               placeholder="티커 (예: AAPL, 005930)"
               value={form.ticker}
               onChange={(e) => setForm((f) => ({ ...f, ticker: e.target.value.toUpperCase() }))}
-              className="col-span-2 sm:col-span-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+              className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
             />
             <input
               type="text"
@@ -118,8 +119,8 @@ export default function WatchlistPage() {
           </div>
 
           {/* 타임프레임 선택 */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs text-slate-500">타임프레임:</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-slate-500 shrink-0">타임프레임:</span>
             {TF_OPTIONS.map((tf) => (
               <button
                 key={tf}
@@ -137,7 +138,7 @@ export default function WatchlistPage() {
 
           {/* 알림 채널 */}
           <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-xs text-slate-500">알림:</span>
+            <span className="text-xs text-slate-500 shrink-0">알림:</span>
             {(['notifyTelegram', 'notifyPush', 'notifyEmail'] as const).map((field) => {
               const labels = { notifyTelegram: '텔레그램', notifyPush: 'Web Push', notifyEmail: '이메일' };
               return (
@@ -169,15 +170,27 @@ export default function WatchlistPage() {
           </div>
         ) : (
           items.map((item) => (
-            <div key={item.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-lg font-bold text-white">
-                  {item.market === 'KR' ? '🇰🇷' : '🇺🇸'}
+            <div key={item.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              {/* 상단: 종목 정보 */}
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-base shrink-0">
+                    {item.market === 'KR' ? '🇰🇷' : '🇺🇸'}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-white font-bold">{item.ticker}</div>
+                    <div className="text-xs text-slate-500 truncate">{item.name}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-white font-bold">{item.ticker}</div>
-                  <div className="text-xs text-slate-500">{item.name}</div>
-                </div>
+                <button
+                  onClick={() => handleDelete(item.id)}
+                  className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors text-base shrink-0 flex items-center justify-center">
+                  ×
+                </button>
+              </div>
+
+              {/* 하단: 타임프레임 + 알림 토글 */}
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex gap-1.5 flex-wrap">
                   {item.timeframes.map((tf) => (
                     <span key={tf} className="text-xs font-mono px-2 py-0.5 bg-slate-800 text-slate-400 rounded">
@@ -185,29 +198,22 @@ export default function WatchlistPage() {
                     </span>
                   ))}
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* 알림 토글 */}
-                {(['notifyTelegram', 'notifyPush', 'notifyEmail'] as const).map((field) => {
-                  const labels = { notifyTelegram: '✈️', notifyPush: '🔔', notifyEmail: '📧' };
-                  return (
-                    <button
-                      key={field}
-                      onClick={() => handleToggleNotify(item.id, field)}
-                      title={field}
-                      className={`w-8 h-8 rounded-lg text-sm transition-colors ${
-                        item[field] ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-600'
-                      }`}>
-                      {labels[field]}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors text-sm">
-                  ×
-                </button>
+                <div className="flex items-center gap-2">
+                  {(['notifyTelegram', 'notifyPush', 'notifyEmail'] as const).map((field) => {
+                    const labels = { notifyTelegram: '✈️', notifyPush: '🔔', notifyEmail: '📧' };
+                    return (
+                      <button
+                        key={field}
+                        onClick={() => handleToggleNotify(item.id, field)}
+                        title={field}
+                        className={`w-8 h-8 rounded-lg text-sm transition-colors ${
+                          item[field] ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-600'
+                        }`}>
+                        {labels[field]}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ))

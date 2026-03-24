@@ -26,7 +26,6 @@ export default function HistoryPage() {
     await load();
   };
 
-  // 통계
   const decided = signals.filter((s) => s.result === 'WIN' || s.result === 'LOSS');
   const wins = decided.filter((s) => s.result === 'WIN').length;
   const losses = decided.filter((s) => s.result === 'LOSS').length;
@@ -39,14 +38,14 @@ export default function HistoryPage() {
   });
 
   return (
-    <div className="grid-bg min-h-screen p-6 space-y-6">
+    <div className="grid-bg min-h-screen p-4 md:p-6 space-y-4 md:space-y-6">
       <div>
         <div className="text-xs font-mono text-emerald-400 uppercase tracking-widest mb-1">성과 분석</div>
-        <h1 className="text-2xl font-bold text-white">신호 히스토리</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">신호 히스토리</h1>
       </div>
 
       {/* 통계 */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
           <div className="text-xs font-mono text-slate-500 uppercase mb-1">전체 신호</div>
           <div className="text-2xl font-bold text-white font-mono">{signals.length}</div>
@@ -65,8 +64,8 @@ export default function HistoryPage() {
         ))}
       </div>
 
-      {/* 테이블 */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      {/* 데스크톱 테이블 (md 이상) */}
+      <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -137,6 +136,80 @@ export default function HistoryPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* 모바일 카드 리스트 (md 미만) */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="text-center py-10 text-slate-600 font-mono text-sm">로딩 중...</div>
+        ) : signals.length === 0 ? (
+          <div className="text-center py-16 text-slate-600 border border-slate-800 rounded-xl bg-slate-900/50">
+            <div className="text-3xl mb-3">📊</div>
+            <div className="text-sm font-mono">데이터 없음</div>
+          </div>
+        ) : (
+          signals.map((s) => (
+            <div key={s.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+              {/* 카드 헤더 */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-bold">{s.ticker}</span>
+                  <span className="text-xs font-mono bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">{s.timeframe}</span>
+                  <span className={`text-xs font-mono font-semibold ${s.type === 'SELL' ? 'text-red-400' : 'text-emerald-400'}`}>
+                    {getSignalTypeLabel(s.type)}
+                  </span>
+                </div>
+                <span className="text-xs text-slate-600 font-mono">{formatDateTime(s.createdAt)}</span>
+              </div>
+
+              {/* 전략 */}
+              <div className="text-xs text-slate-500 truncate">{s.strategy}</div>
+
+              {/* 가격 3열 */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-slate-950 rounded-lg p-2 text-center">
+                  <div className="text-xs text-slate-500 mb-0.5">진입</div>
+                  <div className="text-xs font-mono text-white font-semibold">{formatPrice(s.entryPrice, s.market)}</div>
+                </div>
+                <div className="bg-slate-950 rounded-lg p-2 text-center">
+                  <div className="text-xs text-slate-500 mb-0.5">손절</div>
+                  <div className="text-xs font-mono text-red-400 font-semibold">{formatPrice(s.stopLoss, s.market)}</div>
+                </div>
+                <div className="bg-slate-950 rounded-lg p-2 text-center">
+                  <div className="text-xs text-slate-500 mb-0.5">익절</div>
+                  <div className="text-xs font-mono text-sky-400 font-semibold">{formatPrice(s.takeProfit, s.market)}</div>
+                </div>
+              </div>
+
+              {/* RSI + 결과 */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono text-slate-400">RSI {s.rsi.toFixed(1)}</span>
+                {s.result ? (
+                  <span className={`text-xs font-mono font-semibold ${
+                    s.result === 'WIN' ? 'text-emerald-400' : s.result === 'LOSS' ? 'text-red-400' : 'text-slate-400'
+                  }`}>
+                    {s.result === 'WIN' ? '✓ 수익' : s.result === 'LOSS' ? '✗ 손실' : '— 보류'}
+                  </span>
+                ) : (
+                  <div className="flex gap-1">
+                    {(['WIN', 'LOSS', 'HOLD'] as const).map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => handleResult(s.id, r)}
+                        className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+                          r === 'WIN' ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' :
+                          r === 'LOSS' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' :
+                          'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                        }`}>
+                        {r === 'WIN' ? '✓ 수익' : r === 'LOSS' ? '✗ 손실' : '보류'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

@@ -26,7 +26,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadSignals();
-    // 1분마다 자동 새로고침
     const interval = setInterval(loadSignals, 60_000);
     return () => clearInterval(interval);
   }, [loadSignals]);
@@ -66,44 +65,44 @@ export default function DashboardPage() {
 
   return (
     <div className="grid-bg min-h-screen">
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* 헤더 */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-xs font-mono text-emerald-400 uppercase tracking-widest mb-1">실시간 모니터링</div>
-            <h1 className="text-2xl font-bold text-white">신호 대시보드</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-white">신호 대시보드</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end gap-1.5">
             {lastScan && (
-              <span className="text-xs text-slate-500 font-mono">{lastScan}</span>
+              <span className="text-xs text-slate-500 font-mono text-right">{lastScan}</span>
             )}
             <button
               onClick={handleManualScan}
               disabled={scanning}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm hover:bg-emerald-500/30 transition-colors disabled:opacity-50">
+              className="flex items-center gap-2 px-3 md:px-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm hover:bg-emerald-500/30 transition-colors disabled:opacity-50 whitespace-nowrap">
               {scanning ? (
                 <span className="animate-spin">⟳</span>
               ) : '⚡'}
-              {scanning ? '스캔 중...' : '수동 스캔'}
+              <span className="hidden sm:inline">{scanning ? '스캔 중...' : '수동 스캔'}</span>
             </button>
           </div>
         </div>
 
         {/* 통계 카드 */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <StatCard label="전체 신호" value={signals.length} sub="최근 저장분" />
           <StatCard label="매수 신호" value={buyCount} color="green" sub="BUY A + B" />
           <StatCard label="매도 신호" value={sellCount} color="red" sub="SELL" />
           <StatCard label="활성 신호" value={activeCount} color="blue" sub={`승률 ${winRate}`} />
         </div>
 
-        {/* 필터 탭 */}
-        <div className="flex gap-2">
+        {/* 필터 탭 (가로 스크롤) */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {(['ALL', 'BUY_A', 'BUY_B', 'SELL'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`shrink-0 px-3 md:px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 filter === f
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                   : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700'

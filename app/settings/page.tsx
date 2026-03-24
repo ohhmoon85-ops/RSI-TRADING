@@ -46,7 +46,6 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
-    // 실제로는 KV에 저장 (API 호출)
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -93,14 +92,14 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="grid-bg min-h-screen p-6 space-y-6 max-w-3xl">
+    <div className="grid-bg min-h-screen p-4 md:p-6 space-y-4 md:space-y-6 max-w-3xl">
       <div>
         <div className="text-xs font-mono text-emerald-400 uppercase tracking-widest mb-1">구성 관리</div>
-        <h1 className="text-2xl font-bold text-white">설정</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white">설정</h1>
       </div>
 
       {/* RSI 임계값 */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 space-y-4">
         <h2 className="text-sm font-semibold text-white flex items-center gap-2">
           <span className="text-emerald-400">📊</span> RSI 임계값
         </h2>
@@ -116,7 +115,7 @@ export default function SettingsPage() {
       </section>
 
       {/* 볼린저 밴드 + MACD */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 space-y-4">
         <h2 className="text-sm font-semibold text-white flex items-center gap-2">
           <span className="text-sky-400">📈</span> 지표 파라미터
         </h2>
@@ -131,7 +130,7 @@ export default function SettingsPage() {
       </section>
 
       {/* 텔레그램 */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 space-y-4">
         <h2 className="text-sm font-semibold text-white flex items-center gap-2">
           <span className="text-sky-400">✈️</span> 텔레그램 봇 설정
         </h2>
@@ -152,7 +151,7 @@ export default function SettingsPage() {
       </section>
 
       {/* 이메일 */}
-      <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+      <section className="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-6 space-y-4">
         <h2 className="text-sm font-semibold text-white flex items-center gap-2">
           <span>📧</span> 이메일 설정 (Resend)
         </h2>
@@ -165,24 +164,24 @@ export default function SettingsPage() {
         </p>
       </section>
 
-      {/* 저장 */}
+      {/* 저장 버튼 */}
       <div className="flex items-center gap-3">
         <button
           onClick={handleSave}
-          className="px-6 py-2.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-medium hover:bg-emerald-500/30 transition-colors">
+          className="flex-1 sm:flex-none px-6 py-2.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-medium hover:bg-emerald-500/30 transition-colors">
           {saved ? '✓ 저장됨' : '설정 저장'}
         </button>
         <button
           onClick={() => setForm(DEFAULT)}
-          className="px-4 py-2.5 bg-slate-800 text-slate-400 rounded-lg text-sm hover:bg-slate-700 transition-colors">
+          className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-800 text-slate-400 rounded-lg text-sm hover:bg-slate-700 transition-colors">
           초기화
         </button>
       </div>
 
       {/* 환경변수 안내 */}
-      <section className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+      <section className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 md:p-5">
         <h3 className="text-xs font-mono text-slate-500 uppercase tracking-wider mb-3">Vercel 환경변수 (.env.local)</h3>
-        <pre className="text-xs font-mono text-slate-500 leading-relaxed">
+        <pre className="text-xs font-mono text-slate-500 leading-relaxed overflow-x-auto">
 {`ALPHA_VANTAGE_KEY=your_key
 TELEGRAM_BOT_TOKEN=your_token
 TELEGRAM_CHAT_ID=your_chat_id

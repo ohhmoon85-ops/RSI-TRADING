@@ -34,6 +34,20 @@ body {
   background: #2d4a6a;
 }
 
+/* 스크롤바 숨김 (모바일 필터 탭 등) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* iOS Safe Area */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* 그리드 배경 */
 .grid-bg {
   background-image:
