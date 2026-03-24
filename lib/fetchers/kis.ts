@@ -12,6 +12,18 @@ interface KISToken {
 
 let cachedToken: KISToken | null = null;
 
+/** 모의투자 여부 — Vercel 환경변수 KIS_PAPER=true 로 설정 */
+function isPaper(): boolean {
+  return process.env.KIS_PAPER === 'true';
+}
+
+/** KIS 베이스 URL (실전 vs 모의) */
+function kisBase(): string {
+  return isPaper()
+    ? 'https://openapivts.koreainvestment.com:9443'
+    : 'https://openapi.koreainvestment.com:9443';
+}
+
 /** OAuth 토큰 발급 (1일 유효) */
 async function getKISToken(): Promise<string> {
   const appKey = process.env.KIS_APP_KEY;
@@ -24,7 +36,7 @@ async function getKISToken(): Promise<string> {
     return cachedToken.access_token;
   }
 
-  const res = await fetch('https://openapi.koreainvestment.com:9443/oauth2/tokenP', {
+  const res = await fetch(`${kisBase()}/oauth2/tokenP`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -35,7 +47,10 @@ async function getKISToken(): Promise<string> {
     next: { revalidate: 0 },
   });
 
-  if (!res.ok) throw new Error(`KIS 토큰 발급 실패: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`KIS 토큰 발급 실패: ${res.status} (${isPaper() ? '모의' : '실전'}) — ${body.slice(0, 200)}`);
+  }
 
   const json = await res.json();
   cachedToken = {
@@ -67,8 +82,8 @@ export async function fetchKISCandles(
 
   const isMinute = timeframe !== '1d';
   const endpoint = isMinute
-    ? 'https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice'
-    : 'https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice';
+    ? `${kisBase()}/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice`
+    : `${kisBase()}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice`;
 
   const trId = isMinute ? 'FHKST03010200' : 'FHKST03010100';
 

@@ -20,9 +20,14 @@ export async function GET() {
     });
   }
 
+  const isPaper = process.env.KIS_PAPER === 'true';
+  const base = isPaper
+    ? 'https://openapivts.koreainvestment.com:9443'
+    : 'https://openapi.koreainvestment.com:9443';
+
   // 토큰 발급 테스트
   try {
-    const tokenRes = await fetch('https://openapi.koreainvestment.com:9443/oauth2/tokenP', {
+    const tokenRes = await fetch(`${base}/oauth2/tokenP`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -37,8 +42,14 @@ export async function GET() {
       return NextResponse.json({
         ok: false,
         step: 'token',
+        mode: isPaper ? '모의투자' : '실전투자',
         status: tokenRes.status,
         error: tokenJson.msg1 ?? tokenJson.message ?? JSON.stringify(tokenJson),
+        hint: tokenRes.status === 403
+          ? isPaper
+            ? '실전투자 키로 모의투자 서버에 접속 중 — Vercel에서 KIS_PAPER 환경변수를 제거하세요'
+            : '모의투자 키로 실전투자 서버에 접속 중 — Vercel에 KIS_PAPER=true 를 추가하세요'
+          : '앱키/시크릿 값을 다시 확인하세요',
       });
     }
 
