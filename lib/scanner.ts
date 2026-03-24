@@ -5,6 +5,7 @@
 
 import type { Signal, ScanResult, Timeframe, WatchlistItem } from '@/types';
 import { fetchCandles } from '@/lib/fetchers';
+import { warmupKISToken } from '@/lib/fetchers/kis';
 import { calcIndicators } from '@/lib/indicators';
 import { detectStrategyA } from '@/lib/signals/strategyA';
 import { detectStrategyB } from '@/lib/signals/strategyB';
@@ -170,12 +171,8 @@ export async function runScan(fullScan = false): Promise<{ processed: number; si
     resultsByTf[tf] = (await kv.get<ScanResult[]>(KV_KEYS.scanResults(tf))) ?? [];
   }
 
-  // 병렬 스캔 전 토큰 미리 발급 (분당 1회 제한 대응)
-  try {
-    await fetchCandles('005930', '15m');
-  } catch {
-    // 워밍업 실패해도 계속 진행 (이미 캐시됐을 수 있음)
-  }
+  // 병렬 스캔 전 토큰 1회 발급 후 KV 저장 — 실패 시 즉시 중단
+  await warmupKISToken();
 
   const scanTasks = batch.flatMap(({ ticker, name, sector }) =>
     DEFAULT_SCAN_TIMEFRAMES.map(async (tf) => {

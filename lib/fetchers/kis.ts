@@ -20,6 +20,11 @@ function kisBase(): string {
     : 'https://openapi.koreainvestment.com:9443';
 }
 
+/** 토큰을 KV에 미리 발급·저장 (병렬 스캔 전 1회 호출) */
+export async function warmupKISToken(): Promise<string> {
+  return getKISToken();
+}
+
 /** OAuth 토큰 발급 — KV에 캐싱 (분당 1회 제한 대응) */
 async function getKISToken(): Promise<string> {
   const appKey = process.env.KIS_APP_KEY;
