@@ -102,9 +102,9 @@ export default function HistoryPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500 max-w-[160px] truncate">{s.strategy}</td>
-                    <td className="px-4 py-3 text-right text-xs font-mono text-white">{formatPrice(s.entryPrice, s.market)}</td>
-                    <td className="px-4 py-3 text-right text-xs font-mono text-red-400">{formatPrice(s.stopLoss, s.market)}</td>
-                    <td className="px-4 py-3 text-right text-xs font-mono text-sky-400">{formatPrice(s.takeProfit, s.market)}</td>
+                    <td className="px-4 py-3 text-right text-xs font-mono text-white">{formatPrice(s.entryPrice)}</td>
+                    <td className="px-4 py-3 text-right text-xs font-mono text-red-400">{formatPrice(s.stopLoss)}</td>
+                    <td className="px-4 py-3 text-right text-xs font-mono text-sky-400">{formatPrice(s.takeProfit)}</td>
                     <td className="px-4 py-3 text-xs font-mono text-slate-400">{s.rsi.toFixed(1)}</td>
                     <td className="px-4 py-3">
                       {s.result ? (
@@ -169,15 +169,15 @@ export default function HistoryPage() {
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-slate-950 rounded-lg p-2 text-center">
                   <div className="text-xs text-slate-500 mb-0.5">진입</div>
-                  <div className="text-xs font-mono text-white font-semibold">{formatPrice(s.entryPrice, s.market)}</div>
+                  <div className="text-xs font-mono text-white font-semibold">{formatPrice(s.entryPrice)}</div>
                 </div>
                 <div className="bg-slate-950 rounded-lg p-2 text-center">
                   <div className="text-xs text-slate-500 mb-0.5">손절</div>
-                  <div className="text-xs font-mono text-red-400 font-semibold">{formatPrice(s.stopLoss, s.market)}</div>
+                  <div className="text-xs font-mono text-red-400 font-semibold">{formatPrice(s.stopLoss)}</div>
                 </div>
                 <div className="bg-slate-950 rounded-lg p-2 text-center">
                   <div className="text-xs text-slate-500 mb-0.5">익절</div>
-                  <div className="text-xs font-mono text-sky-400 font-semibold">{formatPrice(s.takeProfit, s.market)}</div>
+                  <div className="text-xs font-mono text-sky-400 font-semibold">{formatPrice(s.takeProfit)}</div>
                 </div>
               </div>
 
