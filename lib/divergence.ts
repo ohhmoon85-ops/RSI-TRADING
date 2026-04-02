@@ -23,7 +23,7 @@ export interface DivergenceResult {
 export function findBullishDivergence(
   candles: Candle[],
   rsiValues: number[],
-  lookback = 30
+  lookback = 40
 ): DivergenceResult {
   const minLen = Math.min(candles.length, rsiValues.length);
   const start = Math.max(0, minLen - lookback);
@@ -82,7 +82,7 @@ export function findBullishDivergence(
 export function findBearishDivergence(
   candles: Candle[],
   rsiValues: number[],
-  lookback = 30
+  lookback = 40
 ): DivergenceResult {
   const minLen = Math.min(candles.length, rsiValues.length);
   const start = Math.max(0, minLen - lookback);

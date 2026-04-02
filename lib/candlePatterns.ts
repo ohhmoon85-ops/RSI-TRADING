@@ -95,7 +95,7 @@ export interface DoubleBottomResult {
 export function findDoubleBottom(
   candles: Candle[],
   bbLowers: number[],
-  lookback = 30
+  lookback = 40
 ): DoubleBottomResult {
   const slice = candles.slice(-lookback);
   const bbSlice = bbLowers.slice(-lookback);
@@ -147,7 +147,7 @@ export interface DoubleTopResult {
 export function findDoubleTop(
   candles: Candle[],
   bbUppers: number[],
-  lookback = 30
+  lookback = 40
 ): DoubleTopResult {
   const slice = candles.slice(-lookback);
   const bbSlice = bbUppers.slice(-lookback);

@@ -11,7 +11,7 @@ import {
   getMACDCross,
   lastOne,
 } from '@/lib/indicators';
-import { isBullishEngulfing, findDoubleBottom } from '@/lib/candlePatterns';
+import { isBullishEngulfing, isHammer, findDoubleBottom } from '@/lib/candlePatterns';
 import { calcBuyRisk, selectBuyStopLoss } from '@/lib/riskCalc';
 import { nanoid } from 'nanoid';
 
@@ -27,14 +27,14 @@ interface StrategyAInput {
 }
 
 export function detectStrategyA(input: StrategyAInput): Signal | null {
-  const { item, candles, rsi, bb, timeframe, rrRatio = 2.0, rsiBuyThreshold = 30 } = input;
+  const { item, candles, rsi, bb, timeframe, rrRatio = 2.0, rsiBuyThreshold = 35 } = input;
 
   if (candles.length < 30 || rsi.length < 2 || bb.length < 2) return null;
 
   const currRSI = lastOne(rsi);
   if (currRSI === undefined) return null;
 
-  // Step 1: RSI 과매도 필터
+  // Step 1: RSI 과매도 필터 (완화: 35 이하)
   if (currRSI > rsiBuyThreshold) return null;
 
   // RSI 횡보 구간 절대 금지
@@ -46,25 +46,18 @@ export function detectStrategyA(input: StrategyAInput): Signal | null {
   const currCandle = lastOne(candles)!;
   const prevCandle = candles[candles.length - 2];
 
-  // Step 2: BB 하단 과확장 확인
+  // Step 2: BB 중간선 이하 확인 (완화: BB 하단 이탈 외에 하단 영역도 허용)
   const bbPos = getBBPosition(currCandle.close, currBB);
-  if (bbPos !== 'BELOW_LOWER') return null;
+  if (bbPos === 'ABOVE_UPPER') return null;
+  if (currCandle.close > currBB.middle) return null;
 
-  // Step 3: 상승 장악형 캔들 확인
-  if (!isBullishEngulfing(prevCandle, currCandle)) return null;
+  // Step 3: 상승 장악형 또는 망치형 캔들 확인 (완화: 망치형 추가)
+  if (!isBullishEngulfing(prevCandle, currCandle) && !isHammer(currCandle)) return null;
 
   // Step 4: 쌍바닥 패턴 확인
   const bbLowers = bb.map((b) => b.lower);
   const doubleBottom = findDoubleBottom(candles, bbLowers);
   if (!doubleBottom.found) return null;
-
-  // Step 4 조건: 2차 저점 ≥ BB 하단 (밴드 내부 안착)
-  const secondLowCandle = candles[doubleBottom.secondLowIdx];
-  if (!secondLowCandle) return null;
-
-  const secondLowBB = bb[doubleBottom.secondLowIdx];
-  if (!secondLowBB) return null;
-  if (secondLowCandle.low < secondLowBB.lower) return null;
 
   // 진입가 = 현재 종가
   const entryPrice = currCandle.close;

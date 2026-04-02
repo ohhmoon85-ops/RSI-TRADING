@@ -5,7 +5,7 @@
 import type { Candle, Signal, WatchlistItem } from '@/types';
 import type { BBResult, MACDResult } from '@/lib/indicators';
 import { isRSIDeadZone, getBBPosition, getMACDCross, lastOne } from '@/lib/indicators';
-import { isBullishEngulfing } from '@/lib/candlePatterns';
+import { isBullishEngulfing, isHammer } from '@/lib/candlePatterns';
 import { findBullishDivergence } from '@/lib/divergence';
 import { calcBuyRisk } from '@/lib/riskCalc';
 import { nanoid } from 'nanoid';
@@ -32,22 +32,24 @@ export function detectStrategyB(input: StrategyBInput): Signal | null {
   // RSI 횡보 구간 금지
   if (isRSIDeadZone(currRSI)) return null;
 
-  // Step 1: 상승 다이버전스 탐지
-  const divergence = findBullishDivergence(candles, rsi);
+  // Step 1: 상승 다이버전스 탐지 (lookback 40으로 확대)
+  const divergence = findBullishDivergence(candles, rsi, 40);
   if (!divergence.found) return null;
 
-  // Step 2: MACD 골든크로스 확인
+  // Step 2: MACD 골든크로스 또는 골든 상태 유지 확인 (완화)
   const prevMACD = macd[macd.length - 2];
   const currMACD = lastOne(macd);
   if (!prevMACD || !currMACD) return null;
 
   const macdCross = getMACDCross(prevMACD, currMACD);
-  if (macdCross !== 'GOLDEN') return null;
+  // 이번 캔들에서 골든크로스이거나, 이미 골든 상태(MACD > Signal)이면 통과
+  const isMacdBullish = macdCross === 'GOLDEN' || currMACD.MACD > currMACD.signal;
+  if (!isMacdBullish) return null;
 
-  // Step 3: 상승 장악형 캔들 확인
+  // Step 3: 상승 장악형 또는 망치형 캔들 확인 (완화: 망치형 추가)
   const currCandle = lastOne(candles)!;
   const prevCandle = candles[candles.length - 2];
-  if (!isBullishEngulfing(prevCandle, currCandle)) return null;
+  if (!isBullishEngulfing(prevCandle, currCandle) && !isHammer(currCandle)) return null;
 
   const currBB = lastOne(bb);
   if (!currBB) return null;
