@@ -75,31 +75,45 @@ const KIS_TF_MAP: Record<string, string> = {
 export async function fetchKISCandles(
   ticker: string,
   timeframe: string,
-  timeoutMs = 3000
+  timeoutMs = 5000
 ): Promise<Candle[]> {
   const token = await getKISToken();
   const appKey = process.env.KIS_APP_KEY!;
   const appSecret = process.env.KIS_APP_SECRET!;
 
-  const isMinute = timeframe !== '1d';
-  const endpoint = isMinute
-    ? `${kisBase()}/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice`
-    : `${kisBase()}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice`;
+  const isDaily = timeframe === '1d';
+  const endpoint = isDaily
+    ? `${kisBase()}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice`
+    : `${kisBase()}/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice`;
 
-  const trId = isMinute ? 'FHKST03010200' : 'FHKST03010100';
+  const trId = isDaily ? 'FHKST03010100' : 'FHKST03010200';
 
-  // 현재 한국시간 HHMMSS — 이 시각 기준으로 최근 캔들을 최대한 많이 수신
+  // 현재 한국시간
   const nowKST = new Date(Date.now() + 9 * 3600 * 1000);
+  const yyyymmdd = nowKST.toISOString().slice(0, 10).replace(/-/g, '');
   const hhmm = nowKST.toISOString().slice(11, 19).replace(/:/g, '');
 
-  const params = new URLSearchParams({
-    FID_ETC_CLS_CODE: '',
-    FID_COND_MRKT_DIV_CODE: 'J',
-    FID_INPUT_ISCD: ticker,
-    FID_INPUT_HOUR_1: isMinute ? hhmm : '',
-    FID_PW_DATA_INCU_YN: 'Y',
-    ...(isMinute && { FID_HOUR_CLS_CODE: KIS_TF_MAP[timeframe] ?? '15' }),
-  });
+  // 일봉: 90일치 요청 / 분봉: 현재 시각 기준 최근 데이터
+  const past90 = new Date(nowKST.getTime() - 90 * 86400 * 1000)
+    .toISOString().slice(0, 10).replace(/-/g, '');
+
+  const params = isDaily
+    ? new URLSearchParams({
+        FID_COND_MRKT_DIV_CODE: 'J',
+        FID_INPUT_ISCD: ticker,
+        FID_INPUT_DATE_1: past90,
+        FID_INPUT_DATE_2: yyyymmdd,
+        FID_PERIOD_DIV_CODE: 'D',
+        FID_ORG_ADJ_PRC: '1',
+      })
+    : new URLSearchParams({
+        FID_ETC_CLS_CODE: '',
+        FID_COND_MRKT_DIV_CODE: 'J',
+        FID_INPUT_ISCD: ticker,
+        FID_INPUT_HOUR_1: hhmm,
+        FID_PW_DATA_INCU_YN: 'Y',
+        FID_HOUR_CLS_CODE: KIS_TF_MAP[timeframe] ?? '15',
+      });
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -118,28 +132,39 @@ export async function fetchKISCandles(
       next: { revalidate: 0 },
     });
 
-    if (!res.ok) throw new Error(`KIS HTTP ${res.status}`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`KIS HTTP ${res.status}: ${body.slice(0, 100)}`);
+    }
 
     const json = await res.json();
+
+    // 일봉: output2, 분봉: output2
     const output2: Array<Record<string, string>> = json.output2 ?? [];
 
     const candles: Candle[] = output2
       .map((row) => {
-        const dateStr = row.stck_bsop_date ?? row.stck_cntg_hour;
-        const timeStr = row.stck_cntg_hour ?? '000000';
-        const dt = dateStr + timeStr;
-        // YYYYMMDDHHMMSS 파싱
-        const time = new Date(
-          `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}T${dt.slice(8, 10)}:${dt.slice(10, 12)}:${dt.slice(12, 14)}+09:00`
-        ).getTime();
+        let time: number;
+        if (isDaily) {
+          // 일봉: stck_bsop_date = YYYYMMDD
+          const d = row.stck_bsop_date ?? '';
+          time = new Date(`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T09:00:00+09:00`).getTime();
+        } else {
+          // 분봉: stck_bsop_date + stck_cntg_hour
+          const dateStr = row.stck_bsop_date ?? '';
+          const timeStr = row.stck_cntg_hour ?? '000000';
+          time = new Date(
+            `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}T${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:${timeStr.slice(4, 6)}+09:00`
+          ).getTime();
+        }
 
         return {
           time,
           open: parseFloat(row.stck_oprc),
           high: parseFloat(row.stck_hgpr),
           low: parseFloat(row.stck_lwpr),
-          close: parseFloat(row.stck_prpr ?? row.stck_clpr),
-          volume: parseFloat(row.cntg_vol ?? row.acml_vol ?? '0'),
+          close: parseFloat(row.stck_clpr ?? row.stck_prpr),
+          volume: parseFloat(row.acml_vol ?? row.cntg_vol ?? '0'),
         };
       })
       .filter((c) => !isNaN(c.time) && c.close > 0)

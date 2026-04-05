@@ -93,4 +93,4 @@ export const KOREA_UNIVERSE: UniverseStock[] = [
 ];
 
 /** 기본 스캔 타임프레임 */
-export const DEFAULT_SCAN_TIMEFRAMES = ['15m', '1h'] as const;
+export const DEFAULT_SCAN_TIMEFRAMES = ['15m', '1d'] as const;
