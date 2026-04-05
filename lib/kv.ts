@@ -46,9 +46,20 @@ let kvInstance: KVStore;
 function getKV(): KVStore {
   if (kvInstance) return kvInstance;
 
-  // Vercel KV 환경변수가 있으면 실제 KV 사용
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+  // Vercel KV 또는 Upstash 환경변수 통합 지원
+  const restUrl =
+    process.env.KV_REST_API_URL ??
+    process.env.UPSTASH_REDIS_REST_URL;
+  const restToken =
+    process.env.KV_REST_API_TOKEN ??
+    process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (restUrl && restToken) {
     try {
+      // @vercel/kv는 KV_REST_API_URL/TOKEN 환경변수를 직접 읽음
+      // Upstash 변수를 사용할 경우 임시로 process.env에 주입
+      if (!process.env.KV_REST_API_URL) process.env.KV_REST_API_URL = restUrl;
+      if (!process.env.KV_REST_API_TOKEN) process.env.KV_REST_API_TOKEN = restToken;
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { kv } = require('@vercel/kv');
       kvInstance = kv;
