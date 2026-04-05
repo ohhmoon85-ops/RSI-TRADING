@@ -104,7 +104,7 @@ export async function fetchKISCandles(
         FID_INPUT_DATE_1: past90,
         FID_INPUT_DATE_2: yyyymmdd,
         FID_PERIOD_DIV_CODE: 'D',
-        FID_ORG_ADJ_PRC: '1',
+        FID_ORG_ADJ_PRC: '0',
       })
     : new URLSearchParams({
         FID_ETC_CLS_CODE: '',
