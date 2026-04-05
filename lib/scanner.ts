@@ -17,7 +17,7 @@ import { kv, KV_KEYS } from '@/lib/kv';
 import { KOREA_UNIVERSE, DEFAULT_SCAN_TIMEFRAMES } from '@/lib/universe';
 
 const DEFAULT_SETTINGS = {
-  rsiBuyThreshold: 30,
+  rsiBuyThreshold: 35,
   rsiSellThreshold: 70,
   bbPeriod: 20,
   bbStdDev: 2,
